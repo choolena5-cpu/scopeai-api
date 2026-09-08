@@ -1,42 +1,57 @@
-![ScopeAI API — AI news and GEO detection](assets/cover.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/brand-light.png">
+  <img src="assets/brand-dark.png" alt="ScopeAI" width="140" height="36">
+</picture>
 
-# AI news and GEO detection for your products
+# AI news and GEO detection API
 
-[中文](README.md) · [Request API access](https://camcat.net/developers) · [Explore ScopeAI](https://camcat.net)
+Connect AI news to your product and use model answers and source evidence for brand observation.
 
-**Integration preview.** The paid API is awaiting production activation. Confirm product availability before funding an account. See [service status](docs/status.md).
+[Request access](https://camcat.net/developers) · [Explore ScopeAI](https://camcat.net) · [Integration guide](docs/getting-started.md) · [中文](README.md)
+
+> **Integration preview:** paid API production activation is pending. Confirm availability before funding an account. [Service status](docs/status.md)
 
 ## AI news
 
-Build a news section, an internal AI digest or an industry assistant with public articles, summaries, categories and source links. Synchronize updates and withdrawals.
+Read public articles, summaries, categories and source links. Build news sections, internal digests and industry assistants; synchronize updates and withdrawals.
 
-![ScopeAI news interface, historical screenshot dated September 5, 2026](assets/news.png)
+![AI news interface design preview](assets/news.png)
 
-This is a historical product screenshot, not evidence that the paid API is already live.
+<sub>Generated interface design preview using simplified historical news content; not a live screenshot.</sub>
 
 ## GEO detection
 
-Observe whether model answers mention or explicitly recommend a brand. Use source evidence, model-answer sampling and historical results to build brand reports and monitoring tools.
+Observe whether specified model answers mention or recommend your brand. Build reports and periodic monitoring with public-source research, original answers and historical results.
 
-![Lutule brand visibility case, visualization of verified September 7, 2026 results](assets/lutule-geo.png)
+![Lutule GEO interface design preview](assets/lutule-geo.png)
 
-**Lutule case:** 2 mentions and 2 explicit recommendations across 11 natural questions; score 18.2/100. This visualization uses verified historical results; it is not a UI screenshot. It is a single small-sample observation, not a stable industry ranking or a measure of product quality or market share, and does not imply brand endorsement.
+<sub>The interface is a design preview; numbers come from verified September 7, 2026 records. Lutule received 2 mentions and 2 explicit recommendations across 11 natural questions. This single observation is not a stable industry ranking or brand endorsement. [Case details](docs/showcase.md)</sub>
 
-The historical website case used DeepSeek with web search enabled. The first paid API sampling target uses the **DeepSeek model API with search disabled**, not its consumer website or app. It does not promise to reproduce these scores. Public-source research is a separate service, not measured multi-platform visibility. See [visual provenance and scope](docs/showcase.md).
+The historical case used DeepSeek with web search enabled. The first API sampling target uses the **DeepSeek model API with search disabled**, not its consumer website or app, and does not promise to reproduce these scores. Public-source research is billed separately and is not measured multi-platform visibility.
 
-## Hosted and prepaid
+## Pricing and access
 
-| Service | Initial price preview |
-| --- | --- |
-| News | CNY 0.01 / nonempty successful request, up to 50 summaries; article detail billed separately |
-| Public-source research | CNY 1.00 / fully delivered run |
-| Model-answer sampling | CNY 1.00 / successful question × repetition unit |
-| Scheduled monitoring | Actual services delivered, with separate authorization and a monthly budget |
+Paid operations require an enabled product, prepaid account balance and an API key authorized to spend. Initial prices below are previews; final availability and quotes come from the service.
 
-Create an [account](https://camcat.net/login?mode=register), confirm availability with [support](https://camcat.net/account/billing), fund your balance, authorize an API key and set spending limits. Funding currently uses support-assisted confirmation. Final prices and availability come from the service.
+| Service | CNY | Unit |
+| --- | ---: | --- |
+| News | **0.01** | Nonempty successful request; up to 50 summaries, article details billed separately |
+| Public-source research | **1.00** | Fully delivered run |
+| Model-answer sampling | **1.00** | Successful question × repetition unit |
 
-GEO reserves the maximum quote, charges successful deliveries and releases failed portions. Valid retries using the same request key do not create duplicate charges. A valid answer that does not mention your brand is still billable. Read [billing rules](docs/pricing.md).
+GEO reserves the maximum quote, charges successful deliveries and releases failed portions. A valid answer without a brand mention is still billable. Valid retries with the same request key do not create duplicate charges. Scheduled monitoring requires separate authorization and a monthly budget. [Billing rules](docs/pricing.md)
 
-This repository publishes integration documentation, visuals and client examples. **The backend, data collection, news database, GEO analysis engine and billing implementation remain private.** Downloading the repository does not grant data access or model credits; paid operations require an enabled product, prepaid balance and an API key authorized to spend.
+1. [Create an account](https://camcat.net/login?mode=register) and visit the [developer portal](https://camcat.net/developers).
+2. Confirm availability with [support](https://camcat.net/account/billing), then fund your balance through the current support-assisted process.
+3. Create an API key, authorize spending, set budgets and call from your server.
+4. Check results, balance and transactions. Reading previously purchased results has no additional charge.
 
-[Quick start](docs/getting-started.md) · [OpenAPI](openapi.json) · [Python](examples/python/quickstart.py) · [TypeScript](examples/typescript/scope-client.ts) · [Request access](https://camcat.net/developers)
+## Developer resources
+
+[Integration guide](docs/getting-started.md) · [OpenAPI 3.1](openapi.json) · [Python](examples/python/quickstart.py) · [TypeScript](examples/typescript/scope-client.ts)
+
+[Use cases](docs/use-cases.md) · [FAQ](docs/faq.md) · [Releases](https://github.com/choolena5-cpu/scopeai-api/releases)
+
+---
+
+This repository publishes documentation, design previews, API contracts and client examples. **The news database, collection system, GEO analysis engine, billing implementation and backend source remain private.** Downloading the repository does not grant data access or model credits.
