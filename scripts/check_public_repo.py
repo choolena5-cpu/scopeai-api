@@ -9,11 +9,12 @@ allowed = {"README.md", "README.en.md", ".gitignore", ".env.example", "openapi.j
  "docs/status.md", "docs/pricing.md", "docs/faq.md", "docs/use-cases.md", "docs/getting-started.md",
  "examples/python/quickstart.py", "examples/python/scope_client.py", "examples/typescript/scope-client.ts",
  ".github/ISSUE_TEMPLATE/bug_report.md", "scripts/check_public_repo.py", "docs/showcase.md",
- "assets/brand-dark.png", "assets/brand-light.png", "assets/news.png", "assets/lutule-geo.png"}
+ "assets/brand-dark.png", "assets/brand-light.png", "assets/lutule-geo.png"}
 files = [p for p in root.rglob("*") if p.is_file() and ".git" not in p.relative_to(root).parts and "__pycache__" not in p.relative_to(root).parts]
 actual = {str(p.relative_to(root)) for p in files}
 assert actual == allowed, f"Unexpected or missing public files: {actual ^ allowed}"
 secret = re.compile(r"(?:gh[pousr]_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{24,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)")
+hidden_product = re.compile("ne" + "ws|新" + "闻|资" + "讯", re.IGNORECASE)
 class AssetLinks(HTMLParser):
     def __init__(self):
         super().__init__()
@@ -34,6 +35,7 @@ for path in files:
         continue  # Images receive visual privacy review before publishing.
     text = path.read_text()
     assert not secret.search(text), f"Possible credential in {path.relative_to(root)}"
+    assert not hidden_product.search(text), f"Hidden product mentioned in {path.relative_to(root)}"
     assert ("/" + "Users" + "/") not in text and ("PG" + "PASSWORD") not in text, f"Internal configuration in {path.relative_to(root)}"
     if path.suffix == ".py":
         compile(text, str(path), "exec")
@@ -59,6 +61,7 @@ def visit(value):
         for child in value:
             visit(child)
 visit(spec)
-assert len(spec["paths"]) == 31
+assert len(spec["paths"]) == 20
+assert all(path.startswith(("/geo/", "/account/")) for path in spec["paths"])
 assert "接入预览" in (root / "README.md").read_text()
 print(json.dumps({"public_files": len(files), "openapi_paths": len(spec["paths"]), "links": "passed", "credential_scan": "passed", "python_syntax": "passed", "network_calls": 0}))

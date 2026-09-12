@@ -3,25 +3,17 @@
   <img src="assets/brand-dark.png" alt="ScopeAI" width="140" height="36">
 </picture>
 
-# AI news and GEO detection API
+# ScopeAI GEO observation API
 
-Connect AI news to your product and use model answers and source evidence for brand observation.
+Track how AI answers mention and recommend your brand through public-source research and model-answer sampling.
 
-[Request access](https://camcat.net/developers) · [Explore ScopeAI](https://camcat.net) · [Integration guide](docs/getting-started.md) · [中文](README.md)
+[Request access](https://camcat.net/developers) · [Explore ScopeAI](https://camcat.net/geo) · [Integration guide](docs/getting-started.md) · [中文](README.md)
 
 > **Integration preview:** paid API production activation is pending. Confirm availability before funding an account. [Service status](docs/status.md)
 
-## AI news
+## GEO observation
 
-Read public articles, summaries, categories and source links. Build news sections, internal digests and industry assistants; synchronize updates and withdrawals.
-
-![AI news interface design preview](assets/news.png)
-
-<sub>Generated interface design preview using simplified historical news content; not a live screenshot.</sub>
-
-## GEO detection
-
-Observe whether specified model answers mention or recommend your brand. Build reports and periodic monitoring with public-source research, original answers and historical results.
+Create a private brand project, manage questions and competitors, purchase public-source research or specified model-answer sampling, and query original answers, source evidence and historical results. Scheduled monitoring requires separate authorization and a monthly budget.
 
 ![Lutule GEO interface design preview](assets/lutule-geo.png)
 
@@ -35,15 +27,14 @@ Paid operations require an enabled product, prepaid account balance and an API k
 
 | Service | CNY | Unit |
 | --- | ---: | --- |
-| News | **0.01** | Nonempty successful request; up to 50 summaries, article details billed separately |
 | Public-source research | **1.00** | Fully delivered run |
 | Model-answer sampling | **1.00** | Successful question × repetition unit |
 
-GEO reserves the maximum quote, charges successful deliveries and releases failed portions. A valid answer without a brand mention is still billable. Valid retries with the same request key do not create duplicate charges. Scheduled monitoring requires separate authorization and a monthly budget. [Billing rules](docs/pricing.md)
+Tasks reserve the maximum quote, charge successful deliveries and release failed portions. A valid answer without a brand mention is still billable. Valid retries with the same request key do not create duplicate charges. Scheduled monitoring requires separate authorization and a monthly budget. [Billing rules](docs/pricing.md)
 
 1. [Create an account](https://camcat.net/login?mode=register) and visit the [developer portal](https://camcat.net/developers).
 2. Confirm availability with [support](https://camcat.net/account/billing), then fund your balance through the current support-assisted process.
-3. Create an API key, authorize spending, set budgets and call from your server.
+3. Create an API key, authorize GEO spending, set budgets and call from your server.
 4. Check results, balance and transactions. Reading previously purchased results has no additional charge.
 
 ## Developer resources
@@ -54,4 +45,4 @@ GEO reserves the maximum quote, charges successful deliveries and releases faile
 
 ---
 
-This repository publishes documentation, design previews, API contracts and client examples. **The news database, collection system, GEO analysis engine, billing implementation and backend source remain private.** Downloading the repository does not grant data access or model credits.
+This repository publishes GEO observation documentation, design previews, API contracts and client examples. The analysis engine, billing implementation, customer data and backend source remain private. Downloading the repository does not grant model credits or access to customer data.

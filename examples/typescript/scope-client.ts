@@ -18,6 +18,5 @@ export class ScopeClient {
     if(!response.ok)throw new ScopeApiError(response.status,body);
     return {status:response.status,etag:response.headers.get("etag"),body:body as T};
   }
-  news(requestKey:string,limit=20,etag?:string){return this.request("GET","/news/articles",{query:{limit:String(limit)},requestKey,maxCents:1,etag});}
   accept(requestKey:string,quoteId:string,maxCents:number){return this.request("POST","/geo/checks",{requestKey,body:{quote_id:quoteId,max_charge_cents:maxCents}});}
 }

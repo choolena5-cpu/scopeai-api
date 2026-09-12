@@ -1,14 +1,18 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "ScopeAI 开放 API",
+    "title": "ScopeAI GEO 观察 API",
     "version": "2026-09-07.2",
-    "description": "首版新闻、GEO、账户与计费契约。部署与采集器可用状态以 capabilities/geo/targets 为准。新闻每个非空交付请求1分；正确的条件请求304免费。GEO报价免费，接受后冻结，结果与成功单元扣款原子提交。资料观察不代表各AI产品真实回答；DeepSeek采样明确为模型API。旧geo/balance和geo/projects GET保留旧响应和错误格式。Webhook、团队共享、自动支付不包含在本版。"
+    "description": "GEO 品牌项目、公开资料观察、模型回答采样、周期监测，以及完成这些任务所需的账户与计费契约。实际开放目标与价格以 capabilities、pricing 和 geo/targets 为准。资料观察不代表各 AI 产品的真实回答；模型 API 采样不等同于消费端网页或 App。"
   },
   "servers": [
     {
       "url": "https://camcat.net/api/v1",
-      "description": "接入预览；确认服务正式开放后使用。当前状态见仓库 docs/status.md"
+      "description": "正式域名；新增接口尚待发布验收"
+    },
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "本地开发"
     }
   ],
   "security": [
@@ -17,535 +21,6 @@
     }
   ],
   "paths": {
-    "/news/articles": {
-      "get": {
-        "summary": "读取公开新闻摘要；每次非空成功请求 1 分，默认不开放新消费",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 8,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:-]+$"
-            }
-          },
-          {
-            "name": "X-Max-Charge-Cents",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 10000
-            }
-          },
-          {
-            "name": "category",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "model",
-                "product",
-                "opensource",
-                "funding",
-                "policy",
-                "geo"
-              ]
-            }
-          },
-          {
-            "name": "published_from",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "name": "published_to",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 20
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "maxLength": 1000
-            }
-          },
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "上次ETag。轮询使用新请求编号；网络重试复用原编号和原条件头。"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功，费用以 meta.billing 为准",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NewsList"
-                }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "304": {
-            "description": "内容未变，无响应体、不新增扣费；同编号重试保持不重复收费",
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "X-Newly-Charged-Cents": {
-                "schema": {
-                  "const": "0"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "输入错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "密钥无效或已撤销",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "402": {
-            "description": "可用余额不足，未扣款",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "未授权或产品未开放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "新闻不存在或未公开，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "价格、幂等或内容版本冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "已撤回的新闻不可重放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "响应超过交付大小上限，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "频率超过限制；遵守 Retry-After",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "服务暂不可用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "head": {
-        "summary": "不执行收费 GET",
-        "responses": {
-          "405": {
-            "description": "不支持 HEAD，不扣款"
-          }
-        }
-      }
-    },
-    "/news/articles/{id}": {
-      "get": {
-        "summary": "读取本站公开正文与来源；一次非空成功请求 1 分",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 8,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:-]+$"
-            }
-          },
-          {
-            "name": "X-Max-Charge-Cents",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 10000
-            }
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[1-9][0-9]{0,14}$"
-            }
-          },
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "上次ETag。轮询使用新请求编号；网络重试复用原编号和原条件头。"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功，费用以 meta.billing 为准",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NewsDetail"
-                }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "304": {
-            "description": "内容未变，无响应体、不新增扣费；同编号重试保持不重复收费",
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "X-Newly-Charged-Cents": {
-                "schema": {
-                  "const": "0"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "输入错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "密钥无效或已撤销",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "402": {
-            "description": "可用余额不足，未扣款",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "未授权或产品未开放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "新闻不存在或未公开，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "价格、幂等或内容版本冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "已撤回的新闻不可重放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "响应超过交付大小上限，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "频率超过限制；遵守 Retry-After",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "服务暂不可用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "head": {
-        "summary": "不执行收费 GET",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "405": {
-            "description": "不支持 HEAD，不扣款"
-          }
-        }
-      }
-    },
-    "/news/categories": {
-      "get": {
-        "summary": "免费查询当前公开分类",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功，费用以 meta.billing 为准",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Envelope"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "输入错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "密钥无效或已撤销",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "402": {
-            "description": "可用余额不足，未扣款",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "未授权或产品未开放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "价格、幂等或内容版本冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "已撤回的新闻不可重放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "频率超过限制；遵守 Retry-After",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "服务暂不可用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/account/balance": {
       "get": {
         "summary": "免费查询人民币总额、冻结、可用和累计消费",
@@ -611,16 +86,6 @@
               }
             }
           },
-          "410": {
-            "description": "已撤回的新闻不可重放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
           "429": {
             "description": "频率超过限制；遵守 Retry-After",
             "content": {
@@ -673,7 +138,6 @@
             "required": false,
             "schema": {
               "enum": [
-                "news.read.standard",
                 "geo.research.standard",
                 "geo.measurement.standard"
               ]
@@ -703,7 +167,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "GEO任务编号或新闻收据编号"
+              "description": "GEO 任务编号"
             }
           }
         ],
@@ -760,212 +224,6 @@
           },
           "409": {
             "description": "价格、幂等或内容版本冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "已撤回的新闻不可重放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "频率超过限制；遵守 Retry-After",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "服务暂不可用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/pricing": {
-      "get": {
-        "summary": "免费读取当前新闻价格版本及是否开放；不宣称 GEO 已可付费",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功，费用以 meta.billing 为准",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Envelope"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "输入错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "密钥无效或已撤销",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "402": {
-            "description": "可用余额不足，未扣款",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "未授权或产品未开放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "价格、幂等或内容版本冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "已撤回的新闻不可重放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "频率超过限制；遵守 Retry-After",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "服务暂不可用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/capabilities": {
-      "get": {
-        "summary": "免费查询实际能力开关；付费 GEO 与定时监测为 false",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功，费用以 meta.billing 为准",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Envelope"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "输入错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "密钥无效或已撤销",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "402": {
-            "description": "可用余额不足，未扣款",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "未授权或产品未开放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "价格、幂等或内容版本冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "已撤回的新闻不可重放",
             "content": {
               "application/json": {
                 "schema": {
@@ -1239,1026 +497,6 @@
             }
           }
         }
-      }
-    },
-    "/openapi": {
-      "get": {
-        "summary": "读取本接口契约",
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "OpenAPI 3.1 JSON 文档"
-          }
-        }
-      }
-    },
-    "/news/search": {
-      "get": {
-        "summary": "搜索公开标题与摘要；%和_按字面量匹配",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 8,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:-]+$"
-            }
-          },
-          {
-            "name": "X-Max-Charge-Cents",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 10000
-            }
-          },
-          {
-            "name": "category",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "model",
-                "product",
-                "opensource",
-                "funding",
-                "policy",
-                "geo"
-              ]
-            }
-          },
-          {
-            "name": "published_from",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "name": "published_to",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 20
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "maxLength": 1000
-            }
-          },
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "上次ETag。轮询使用新请求编号；网络重试复用原编号和原条件头。"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 100
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功，费用以 meta.billing 为准",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NewsList"
-                }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "304": {
-            "description": "内容未变，无响应体、不新增扣费；同编号重试保持不重复收费",
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "X-Newly-Charged-Cents": {
-                "schema": {
-                  "const": "0"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "输入错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "密钥无效或已撤销",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "402": {
-            "description": "可用余额不足，未扣款",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "未授权或产品未开放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "新闻不存在或未公开，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "价格、幂等或内容版本冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "已撤回的新闻不可重放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "响应超过交付大小上限，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "频率超过限制；遵守 Retry-After",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "服务暂不可用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/news/hot": {
-      "get": {
-        "summary": "按编辑重要度返回24小时或7天新闻，非阅读量排行",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 8,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:-]+$"
-            }
-          },
-          {
-            "name": "X-Max-Charge-Cents",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 10000
-            }
-          },
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "上次ETag。轮询使用新请求编号；网络重试复用原编号和原条件头。"
-            }
-          },
-          {
-            "name": "window",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "24h",
-                "7d"
-              ],
-              "default": "24h"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 20
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功，费用以 meta.billing 为准",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NewsList"
-                }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "304": {
-            "description": "内容未变，无响应体、不新增扣费；同编号重试保持不重复收费",
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "X-Newly-Charged-Cents": {
-                "schema": {
-                  "const": "0"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "输入错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "密钥无效或已撤销",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "402": {
-            "description": "可用余额不足，未扣款",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "未授权或产品未开放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "新闻不存在或未公开，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "价格、幂等或内容版本冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "已撤回的新闻不可重放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "响应超过交付大小上限，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "频率超过限制；遵守 Retry-After",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "服务暂不可用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/news/topics": {
-      "get": {
-        "summary": "公开专题目录，免费",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "slug": {
-                            "type": "string"
-                          },
-                          "title": {
-                            "type": "string"
-                          },
-                          "description": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "slug",
-                          "title",
-                          "description"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "meta": {
-                      "type": "object",
-                      "properties": {
-                        "request_id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "next_cursor": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "request_id"
-                      ],
-                      "additionalProperties": true
-                    }
-                  },
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "错误代码见响应 error.code；不新增扣费",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "错误代码见响应 error.code；不新增扣费",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "错误代码见响应 error.code；不新增扣费",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "错误代码见响应 error.code；不新增扣费",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "错误代码见响应 error.code；不新增扣费",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "错误代码见响应 error.code；不新增扣费",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "错误代码见响应 error.code；不新增扣费",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "错误代码见响应 error.code；不新增扣费",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "错误代码见响应 error.code；不新增扣费",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/news/topics/{slug}/articles": {
-      "get": {
-        "summary": "专题文章分页；insights对应深度解读",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 8,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:-]+$"
-            }
-          },
-          {
-            "name": "X-Max-Charge-Cents",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 10000
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 20
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "maxLength": 1000
-            }
-          },
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "上次ETag。轮询使用新请求编号；网络重试复用原编号和原条件头。"
-            }
-          },
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "enum": [
-                "model",
-                "product",
-                "opensource",
-                "funding",
-                "insights"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功，费用以 meta.billing 为准",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NewsList"
-                }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "304": {
-            "description": "内容未变，无响应体、不新增扣费；同编号重试保持不重复收费",
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "X-Newly-Charged-Cents": {
-                "schema": {
-                  "const": "0"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "输入错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "密钥无效或已撤销",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "402": {
-            "description": "可用余额不足，未扣款",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "未授权或产品未开放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "新闻不存在或未公开，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "价格、幂等或内容版本冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "已撤回的新闻不可重放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "响应超过交付大小上限，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "频率超过限制；遵守 Retry-After",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "服务暂不可用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/news/changes": {
-      "get": {
-        "summary": "从cursor=0建立全量公开内容库，再持续轮询变化与撤回；纯撤回页免费",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 8,
-              "maxLength": 128,
-              "pattern": "^[A-Za-z0-9._:-]+$"
-            }
-          },
-          {
-            "name": "X-Max-Charge-Cents",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 10000
-            }
-          },
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "上次ETag。轮询使用新请求编号；网络重试复用原编号和原条件头。"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d{1,15}$",
-              "default": "0"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 20
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/NewsChange"
-                      }
-                    },
-                    "meta": {
-                      "type": "object",
-                      "properties": {
-                        "request_id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "next_cursor": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "request_id"
-                      ],
-                      "additionalProperties": true
-                    }
-                  },
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "304": {
-            "description": "内容未变，无响应体、不新增扣费；同编号重试保持不重复收费",
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "X-Newly-Charged-Cents": {
-                "schema": {
-                  "const": "0"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "输入错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "密钥无效或已撤销",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "402": {
-            "description": "可用余额不足，未扣款",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "未授权或产品未开放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "新闻不存在或未公开，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "价格、幂等或内容版本冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "已撤回的新闻不可重放",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "响应超过交付大小上限，不新增费用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "频率超过限制；遵守 Retry-After",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "服务暂不可用",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
-        "description": "事件按提交顺序排列且不清除防漏同步记录。每个事件返回该文章当前公开摘要或撤回标记，不提供历史私有正文。按sequence顺序应用并以article.id覆盖更新。始终保存meta.next_cursor，has_more=false时稍后轮询；不是文章列表的cursor。"
       }
     },
     "/geo/targets": {
@@ -5443,7 +3681,6 @@
             "required": false,
             "schema": {
               "enum": [
-                "news.read.standard",
                 "geo.research.standard",
                 "geo.measurement.standard"
               ]
@@ -5473,7 +3710,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "GEO任务编号或新闻收据编号"
+              "description": "GEO 任务编号"
             }
           }
         ],
@@ -5591,269 +3828,6 @@
       }
     },
     "schemas": {
-      "Envelope": {
-        "type": "object",
-        "required": [
-          "data",
-          "meta"
-        ],
-        "properties": {
-          "data": {},
-          "meta": {
-            "$ref": "#/components/schemas/Meta"
-          }
-        }
-      },
-      "Meta": {
-        "type": "object",
-        "required": [
-          "request_id"
-        ],
-        "properties": {
-          "request_id": {
-            "type": "string"
-          },
-          "next_cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "billing": {
-            "$ref": "#/components/schemas/Billing"
-          }
-        }
-      },
-      "Billing": {
-        "type": "object",
-        "required": [
-          "sku",
-          "price_version",
-          "charged_cents",
-          "newly_charged_cents",
-          "replayed",
-          "transaction_id",
-          "available_cents_after"
-        ],
-        "properties": {
-          "sku": {
-            "const": "news.read.standard"
-          },
-          "price_version": {
-            "type": "string"
-          },
-          "charged_cents": {
-            "type": "integer",
-            "description": "人民币分，不使用浮点元"
-          },
-          "newly_charged_cents": {
-            "type": "integer",
-            "description": "人民币分，不使用浮点元"
-          },
-          "replayed": {
-            "type": "boolean"
-          },
-          "transaction_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "available_cents_after": {
-            "type": "integer",
-            "description": "人民币分，不使用浮点元"
-          }
-        }
-      },
-      "NewsSummary": {
-        "type": "object",
-        "required": [
-          "id",
-          "slug",
-          "title",
-          "summary",
-          "category",
-          "path",
-          "published_at",
-          "updated_at",
-          "image_url"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "category": {
-            "type": "string"
-          },
-          "path": {
-            "type": "string"
-          },
-          "published_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "image_url": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "与公开文章相同的配图URL，可能是站点相对路径；没有图片为null。"
-          }
-        }
-      },
-      "NewsList": {
-        "type": "object",
-        "required": [
-          "data",
-          "meta"
-        ],
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NewsSummary"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/Meta"
-          }
-        }
-      },
-      "NewsDetail": {
-        "type": "object",
-        "required": [
-          "data",
-          "meta"
-        ],
-        "properties": {
-          "data": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NewsSummary"
-              },
-              {
-                "type": "object",
-                "required": [
-                  "body",
-                  "sources"
-                ],
-                "properties": {
-                  "body": {
-                    "type": "object",
-                    "required": [
-                      "sections"
-                    ],
-                    "properties": {
-                      "lead": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      },
-                      "sections": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "required": [
-                            "heading",
-                            "paragraphs"
-                          ],
-                          "properties": {
-                            "heading": {
-                              "type": "string"
-                            },
-                            "paragraphs": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            },
-                            "bullets": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "sources": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "required": [
-                        "name",
-                        "url"
-                      ],
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "url": {
-                          "type": "string",
-                          "format": "uri"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            ]
-          },
-          "meta": {
-            "$ref": "#/components/schemas/Meta"
-          }
-        }
-      },
-      "Error": {
-        "type": "object",
-        "required": [
-          "error"
-        ],
-        "properties": {
-          "error": {
-            "type": "object",
-            "required": [
-              "code",
-              "message",
-              "request_id"
-            ],
-            "properties": {
-              "code": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "request_id": {
-                "type": "string"
-              },
-              "details": {
-                "type": "object",
-                "additionalProperties": true
-              }
-            }
-          }
-        }
-      },
       "Balance": {
         "type": "object",
         "required": [
@@ -5911,65 +3885,124 @@
           }
         }
       },
-      "Transactions": {
+      "Check": {
         "type": "object",
-        "required": [
-          "data",
-          "meta"
-        ],
         "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": [
-                "id",
-                "kind",
-                "amount_cents",
-                "created_at"
-              ],
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "kind": {
-                  "enum": [
-                    "credit",
-                    "charge",
-                    "refund",
-                    "cash_return"
-                  ]
-                },
-                "amount_cents": {
-                  "type": "integer",
-                  "description": "人民币分，不使用浮点元"
-                },
-                "created_at": {
-                  "type": "string"
-                },
-                "sku": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "resource_key": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "unit_id": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "partial",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "product": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "target_model": {
+            "type": "string"
+          },
+          "methodology_version": {
+            "type": "string"
+          },
+          "project_revision": {
+            "type": "integer"
+          },
+          "question_version": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "billing": {
+            "type": "object",
+            "properties": {
+              "amount_cents": {
+                "type": "integer"
+              },
+              "charged_cents": {
+                "type": "integer"
+              },
+              "released_cents": {
+                "type": "integer"
+              },
+              "remaining_cents": {
+                "type": "integer"
               }
+            },
+            "required": [
+              "amount_cents",
+              "charged_cents",
+              "released_cents",
+              "remaining_cents"
+            ],
+            "additionalProperties": false
+          },
+          "progress": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
             }
           },
-          "meta": {
-            "$ref": "#/components/schemas/Meta"
+          "report": {
+            "type": "object",
+            "description": "按 kind 区分资料覆盖和模型API提及；模型提及排除问题中已提示品牌的回答。对比趋势须保持目标、模型、项目版本、题库版本和口径一致。"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "state",
+          "product",
+          "billing",
+          "report"
+        ],
+        "additionalProperties": true
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "request_id"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
           }
         }
       },
@@ -6000,6 +4033,17 @@
           }
         }
       },
+      "LegacyError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
       "LegacyProjects": {
         "type": "object",
         "required": [
@@ -6014,16 +4058,42 @@
           }
         }
       },
-      "LegacyError": {
+      "Meta": {
         "type": "object",
         "required": [
-          "error"
+          "request_id"
         ],
         "properties": {
-          "error": {
+          "request_id": {
             "type": "string"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
+      },
+      "PaidAcceptInput": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "max_charge_cents": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "quote_id",
+          "max_charge_cents"
+        ],
+        "additionalProperties": false
       },
       "PaidQuoteInput": {
         "type": "object",
@@ -6085,70 +4155,192 @@
         ],
         "additionalProperties": false
       },
-      "PaidAcceptInput": {
+      "Project": {
         "type": "object",
         "properties": {
-          "quote_id": {
+          "name": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "minLength": 1,
+            "maxLength": 80
           },
-          "max_charge_cents": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 10000
-          }
-        },
-        "required": [
-          "quote_id",
-          "max_charge_cents"
-        ],
-        "additionalProperties": false
-      },
-      "ScheduleInput": {
-        "type": "object",
-        "properties": {
-          "request_key": {
-            "type": "string",
-            "minLength": 8,
-            "maxLength": 128,
-            "pattern": "^[A-Za-z0-9._:-]+$"
-          },
-          "quote_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "interval_days": {
+          "site": {
             "anyOf": [
               {
-                "type": "number",
-                "const": 1
+                "type": "string",
+                "maxLength": 2048,
+                "format": "uri"
               },
               {
-                "type": "number",
-                "const": 7
+                "type": "string",
+                "const": ""
               }
             ]
           },
-          "monthly_cents": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100000
-          },
-          "accepted_price_version": {
+          "industry": {
             "type": "string",
-            "const": "geo-2026-09-v1"
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "market": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "aliases": {
+            "default": [],
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80
+            }
+          },
+          "competitors": {
+            "default": [],
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 80
+                },
+                "site": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 2048,
+                      "format": "uri"
+                    },
+                    {
+                      "type": "string",
+                      "const": ""
+                    }
+                  ]
+                },
+                "aliases": {
+                  "default": [],
+                  "maxItems": 10,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "site",
+                "aliases"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "facts": {
+            "default": "",
+            "type": "string",
+            "maxLength": 8000
+          },
+          "questionLibrary": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "question": {
+                  "type": "string",
+                  "minLength": 4,
+                  "maxLength": 500
+                },
+                "scene": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "origin": {
+                  "type": "string",
+                  "enum": [
+                    "preset",
+                    "public_question",
+                    "social",
+                    "shared_ai",
+                    "customer_support",
+                    "site_search",
+                    "manual",
+                    "generated"
+                  ]
+                },
+                "sourceName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "sourceUrl": {
+                  "type": "string",
+                  "maxLength": 2048,
+                  "format": "uri"
+                },
+                "excerpt": {
+                  "default": "",
+                  "type": "string",
+                  "maxLength": 1000
+                },
+                "collectedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "question",
+                "scene",
+                "origin",
+                "sourceName",
+                "excerpt",
+                "collectedAt",
+                "enabled"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
           }
         },
         "required": [
-          "request_key",
-          "quote_id",
-          "interval_days",
-          "monthly_cents",
-          "accepted_price_version"
+          "id",
+          "name",
+          "revision",
+          "archived"
         ],
-        "additionalProperties": false
+        "additionalProperties": true
       },
       "ProjectInput": {
         "type": "object",
@@ -6495,252 +4687,6 @@
           "revision"
         ]
       },
-      "Project": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 80
-          },
-          "site": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 2048,
-                "format": "uri"
-              },
-              {
-                "type": "string",
-                "const": ""
-              }
-            ]
-          },
-          "industry": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 80
-          },
-          "market": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 80
-          },
-          "aliases": {
-            "default": [],
-            "maxItems": 10,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 2,
-              "maxLength": 80
-            }
-          },
-          "competitors": {
-            "default": [],
-            "maxItems": 5,
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "minLength": 2,
-                  "maxLength": 80
-                },
-                "site": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "maxLength": 2048,
-                      "format": "uri"
-                    },
-                    {
-                      "type": "string",
-                      "const": ""
-                    }
-                  ]
-                },
-                "aliases": {
-                  "default": [],
-                  "maxItems": 10,
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "minLength": 2,
-                    "maxLength": 80
-                  }
-                }
-              },
-              "required": [
-                "name",
-                "site",
-                "aliases"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "facts": {
-            "default": "",
-            "type": "string",
-            "maxLength": 8000
-          },
-          "questionLibrary": {
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "question": {
-                  "type": "string",
-                  "minLength": 4,
-                  "maxLength": 500
-                },
-                "scene": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 60
-                },
-                "origin": {
-                  "type": "string",
-                  "enum": [
-                    "preset",
-                    "public_question",
-                    "social",
-                    "shared_ai",
-                    "customer_support",
-                    "site_search",
-                    "manual",
-                    "generated"
-                  ]
-                },
-                "sourceName": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 120
-                },
-                "sourceUrl": {
-                  "type": "string",
-                  "maxLength": 2048,
-                  "format": "uri"
-                },
-                "excerpt": {
-                  "default": "",
-                  "type": "string",
-                  "maxLength": 1000
-                },
-                "collectedAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                },
-                "enabled": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "id",
-                "question",
-                "scene",
-                "origin",
-                "sourceName",
-                "excerpt",
-                "collectedAt",
-                "enabled"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "revision": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "archived": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "updatedAt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "revision",
-          "archived"
-        ],
-        "additionalProperties": true
-      },
-      "Target": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "product": {
-            "enum": [
-              "geo.research.standard",
-              "geo.measurement.standard"
-            ]
-          },
-          "label": {
-            "type": "string"
-          },
-          "channel": {
-            "enum": [
-              "public_sources",
-              "model_api"
-            ]
-          },
-          "model": {
-            "type": "string"
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "price_version": {
-            "type": "string"
-          },
-          "unit_price_cents": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "measurement": {
-            "type": "boolean"
-          },
-          "search_mode": {
-            "type": "string"
-          },
-          "scope": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "product",
-          "label",
-          "channel",
-          "model",
-          "enabled",
-          "price_version",
-          "unit_price_cents",
-          "measurement",
-          "search_mode",
-          "scope"
-        ],
-        "additionalProperties": false
-      },
       "Quote": {
         "type": "object",
         "properties": {
@@ -6810,137 +4756,6 @@
         ],
         "additionalProperties": false
       },
-      "Check": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "project_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "state": {
-            "enum": [
-              "queued",
-              "running",
-              "completed",
-              "partial",
-              "failed",
-              "cancelled"
-            ]
-          },
-          "product": {
-            "type": "string"
-          },
-          "target_id": {
-            "type": "string"
-          },
-          "target_model": {
-            "type": "string"
-          },
-          "methodology_version": {
-            "type": "string"
-          },
-          "project_revision": {
-            "type": "integer"
-          },
-          "question_version": {
-            "type": "string"
-          },
-          "created_at": {
-            "type": "string"
-          },
-          "updated_at": {
-            "type": "string"
-          },
-          "billing": {
-            "type": "object",
-            "properties": {
-              "amount_cents": {
-                "type": "integer"
-              },
-              "charged_cents": {
-                "type": "integer"
-              },
-              "released_cents": {
-                "type": "integer"
-              },
-              "remaining_cents": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "amount_cents",
-              "charged_cents",
-              "released_cents",
-              "remaining_cents"
-            ],
-            "additionalProperties": false
-          },
-          "progress": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "integer"
-            }
-          },
-          "report": {
-            "type": "object",
-            "description": "按 kind 区分资料覆盖和模型API提及；模型提及排除问题中已提示品牌的回答。对比趋势须保持目标、模型、项目版本、题库版本和口径一致。"
-          }
-        },
-        "required": [
-          "id",
-          "project_id",
-          "state",
-          "product",
-          "billing",
-          "report"
-        ],
-        "additionalProperties": true
-      },
-      "Unit": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "question": {
-            "type": "string"
-          },
-          "state": {
-            "enum": [
-              "pending",
-              "running",
-              "succeeded",
-              "failed",
-              "cancelled"
-            ]
-          },
-          "result": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "description": "kind=model_api_measurement:实际answer、model、observedAt、brands、citations和usage；kind=public_source_research:questions、sources、analyses、suggestions。仅已完成交付返回结果。"
-          },
-          "error_code": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "question",
-          "state",
-          "result",
-          "error_code"
-        ],
-        "additionalProperties": false
-      },
       "Schedule": {
         "type": "object",
         "properties": {
@@ -6990,50 +4805,214 @@
         ],
         "additionalProperties": true
       },
-      "NewsChange": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "sequence": {
-                "type": "string"
-              },
-              "operation": {
-                "const": "upsert"
-              },
-              "article": {
-                "$ref": "#/components/schemas/NewsSummary"
-              }
-            },
-            "required": [
-              "sequence",
-              "operation",
-              "article"
-            ],
-            "additionalProperties": false
+      "ScheduleInput": {
+        "type": "object",
+        "properties": {
+          "request_key": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
           },
-          {
-            "type": "object",
-            "properties": {
-              "sequence": {
-                "type": "string"
+          "quote_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "interval_days": {
+            "anyOf": [
+              {
+                "type": "number",
+                "const": 1
               },
-              "operation": {
-                "const": "withdraw"
-              },
-              "id": {
-                "type": "string"
+              {
+                "type": "number",
+                "const": 7
               }
-            },
-            "required": [
-              "sequence",
-              "operation",
-              "id"
-            ],
-            "additionalProperties": false
+            ]
+          },
+          "monthly_cents": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "accepted_price_version": {
+            "type": "string",
+            "const": "geo-2026-09-v1"
           }
-        ]
+        },
+        "required": [
+          "request_key",
+          "quote_id",
+          "interval_days",
+          "monthly_cents",
+          "accepted_price_version"
+        ],
+        "additionalProperties": false
+      },
+      "Target": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "product": {
+            "enum": [
+              "geo.research.standard",
+              "geo.measurement.standard"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "channel": {
+            "enum": [
+              "public_sources",
+              "model_api"
+            ]
+          },
+          "model": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "price_version": {
+            "type": "string"
+          },
+          "unit_price_cents": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "measurement": {
+            "type": "boolean"
+          },
+          "search_mode": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "product",
+          "label",
+          "channel",
+          "model",
+          "enabled",
+          "price_version",
+          "unit_price_cents",
+          "measurement",
+          "search_mode",
+          "scope"
+        ],
+        "additionalProperties": false
+      },
+      "Transactions": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "kind",
+                "amount_cents",
+                "created_at"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "credit",
+                    "charge",
+                    "refund",
+                    "cash_return"
+                  ]
+                },
+                "amount_cents": {
+                  "type": "integer",
+                  "description": "人民币分，不使用浮点元"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "sku": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "resource_key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "unit_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
+      },
+      "Unit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "result": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "kind=model_api_measurement:实际answer、model、observedAt、brands、citations和usage；kind=public_source_research:questions、sources、analyses、suggestions。仅已完成交付返回结果。"
+          },
+          "error_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "state",
+          "result",
+          "error_code"
+        ],
+        "additionalProperties": false
       }
     }
-  }
+  },
+  "tags": []
 }

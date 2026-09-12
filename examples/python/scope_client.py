@@ -53,12 +53,6 @@ class ScopeClient:
                 body = {"error": {"code": "invalid_error_response"}}
             raise ScopeError(error.code, body) from None
 
-    def news(self, request_key, *, limit=20, etag=None):
-        return self.request("GET", "/news/articles", query={"limit": limit}, request_key=request_key, max_cents=1, etag=etag)
-
-    def changes(self, request_key, cursor="0"):
-        return self.request("GET", "/news/changes", query={"cursor": cursor}, request_key=request_key, max_cents=1)
-
     def quote(self, project_id, revision, questions):
         return self.request("POST", "/geo/quotes", body={"project_id": project_id, "revision": revision,
             "product": "geo.measurement.standard", "target_id": "deepseek-model-api", "questions": questions, "repeats": 1, "max_unit_cents": 100})
