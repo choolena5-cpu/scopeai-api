@@ -1,81 +1,61 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/brand-light.png">
-  <img src="assets/brand-dark.png" alt="ScopeAI" width="140" height="36">
-</picture>
+# ScopeAI
 
-# ScopeAI · AI news, model comparisons and GEO observation
+### A way into AI. A perspective on what comes next.
 
-Follow AI developments, compare models by task, track public Codex quota-reset announcements and explore how AI answers mention your brand. ScopeAI is a Chinese-language platform with an [English overview](https://scopeai.cc/en).
+[Visit scopeai.cc](https://scopeai.cc/) · [Industry analysis](https://scopeai.cc/observations) · [Model rankings](https://scopeai.cc/ranking) · [GEO observation](https://scopeai.cc/geo-services) · [中文](README.md)
 
-[Visit ScopeAI](https://scopeai.cc/) · [AI benchmark lab](https://scopeai.cc/lab) · [Codex reset tracker](https://scopeai.cc/codex-resets) · [GEO services](https://scopeai.cc/geo-services) · [中文](README.md)
+[![ScopeAI brand artwork: a quiet vantage point on a changing horizon](assets/scopeai-horizon.png)](https://scopeai.cc/)
 
-## Explore the website
+**ScopeAI is a Chinese-language AI news and GEO observation platform. It brings together an AI news timeline, model rankings, industry analysis and brand visibility observation, with original sources available for readers to examine.**
 
-| Feature | What you can do | Open |
-| --- | --- | --- |
-| AI news timeline and highlights | Follow model releases, product updates, open-source projects and funding news with links to original sources | [Timeline](https://scopeai.cc/) · [Highlights](https://scopeai.cc/hot) |
-| Analysis and explainers | Read context and analysis of important AI developments | [Daily analysis](https://scopeai.cc/observations) · [In-depth articles](https://scopeai.cc/insights) |
-| AI model rankings | Explore model comparisons to help shortlist models | [Rankings](https://scopeai.cc/ranking) |
-| AI benchmark lab | Explore third-party public evaluations for presentations, coding, writing, math and science, knowledge Q&A, research and agent tasks | [Benchmark lab](https://scopeai.cc/lab) |
-| Codex reset tracker | Read public quota-reset announcements, historical records and related updates; distinguish quota resets from reset cards | [Codex resets](https://scopeai.cc/codex-resets) |
-| GEO brand observation | Explore brand mentions, recommendations and citation evidence, with service details and a private brand workspace | [Service overview](https://scopeai.cc/geo-services) · [Workspace](https://scopeai.cc/geo) |
-| RSS and Agent integration guides | Subscribe in a feed reader or review AI Agent / MCP integration options and service boundaries | [RSS](https://scopeai.cc/rss.xml) · [Agent docs](https://scopeai.cc/agents) |
+ScopeAI emerged amid the tides of a world being reshaped by intelligence. We follow the evolution of models, products and industries, while asking what happens when technology moves beyond the screen: how it changes knowledge, creativity and human life. Through the noise, we look for the changes that matter, recording this unfolding age with clarity, care and warmth.
 
-The benchmark lab presents third-party evaluations; scores from different benchmarks and configurations require their own context. The Codex tracker is an independent information service, not an official OpenAI product. Check your account's usage page for your personal remaining quota and reset time.
+ScopeAI is both an entry point for understanding AI and an attempt to find a perspective on the future. We do not rush to follow every passing current. We aim to make complexity understandable, to see trends over a longer horizon, and to bring lasting ideas to more people—so that technology is not merely discussed, but understood, used and ultimately made a force for expanding human possibility.
 
-### Website screenshots
+## What we observe
 
-[![ScopeAI selected AI news](assets/scopeai-hot.png)](https://scopeai.cc/hot)
+### The AI news timeline
 
-<details>
-<summary>View the AI benchmark lab</summary>
+Follow developments across models, products and open-source communities, with links back to original sources.
 
-[![ScopeAI AI benchmark lab with task-specific third-party evaluations](assets/scopeai-lab.png)](https://scopeai.cc/lab)
+[News timeline](https://scopeai.cc/) · [Selected stories](https://scopeai.cc/hot)
 
-</details>
+### Model rankings
 
-<sub>Actual website screenshots captured on October 19, 2026. News, models and evaluation results change as the website is updated.</sub>
+Find a starting point for comparing an evolving model landscape. Consider tasks, benchmarks and context as you form your own judgment.
 
-## GEO API and developer access
+[Model rankings](https://scopeai.cc/ranking) · [AI evaluation lab](https://scopeai.cc/lab)
 
-This repository contains product information, GEO API documentation, API contracts and client examples. Website features and paid API availability are described separately.
+### Industry analysis
 
-[Request API access](https://scopeai.cc/developers) · [Integration guide](docs/getting-started.md)
+Place individual events within a longer horizon. Explore the connections between technology, products, industries and the world they affect.
 
-> **Integration preview:** paid API production activation is pending. Confirm availability before funding an account. [Service status](docs/status.md)
+[Daily analysis](https://scopeai.cc/observations) · [In-depth reading](https://scopeai.cc/insights)
 
-## GEO observation
+### Brand visibility in AI
 
-Create a private brand project, manage questions and competitors, purchase public-source research or specified model-answer sampling, and query original answers, source evidence and historical results. Scheduled monitoring requires separate authorization and a monthly budget.
+Understand how brands are described, mentioned and cited in AI information environments, grounded in context and source evidence.
 
-![Lutule GEO interface design preview](assets/lutule-geo.png)
+[Explore GEO observation](https://scopeai.cc/geo-services)
 
-<sub>The interface is a design preview; numbers come from verified September 7, 2026 records. Lutule received 2 mentions and 2 explicit recommendations across 11 natural questions. This single observation is not a stable industry ranking or brand endorsement. [Case details](docs/showcase.md)</sub>
+![ScopeAI brand artwork: knowledge, creativity and human possibility](assets/scopeai-possibility.png)
 
-The historical case used DeepSeek with web search enabled. The first API sampling target uses the **DeepSeek model API with search disabled**, not its consumer website or app, and does not promise to reproduce these scores. Public-source research is billed separately and is not measured multi-platform visibility.
+## Clarity in understanding. Care in judgment.
 
-## Pricing and access
+Sources help readers return to where information began. Context keeps a result connected to its conditions. A human perspective brings the value of technology back to knowledge, creativity and everyday life.
 
-Paid operations require an enabled product, prepaid account balance and an API key authorized to spend. Initial prices below are previews; final availability and quotes come from the service.
+[About ScopeAI](https://scopeai.cc/about) · [Editorial approach](https://scopeai.cc/methodology)
 
-| Service | CNY | Unit |
-| --- | ---: | --- |
-| Public-source research | **1.00** | Fully delivered run |
-| Model-answer sampling | **1.00** | Successful question × repetition unit |
+## Connect news to your workflow
 
-Tasks reserve the maximum quote, charge successful deliveries and release failed portions. A valid answer without a brand mention is still billable. Valid retries with the same request key do not create duplicate charges. Scheduled monitoring requires separate authorization and a monthly budget. [Billing rules](docs/pricing.md)
+Use RSS to bring news into your reader or content workflow and make important developments part of your daily reading.
 
-1. [Create an account](https://scopeai.cc/login?mode=register) and visit the [developer portal](https://scopeai.cc/developers).
-2. Confirm availability with [support](https://scopeai.cc/account/billing), then fund your balance through the current support-assisted process.
-3. Create an API key, authorize GEO spending, set budgets and call from your server.
-4. Check results, balance and transactions. Reading previously purchased results has no additional charge.
-
-## Developer resources
-
-[Integration guide](docs/getting-started.md) · [OpenAPI 3.1](openapi.json) · [Python](examples/python/quickstart.py) · [TypeScript](examples/typescript/scope-client.ts)
-
-[Use cases](docs/use-cases.md) · [FAQ](docs/faq.md) · [Releases](https://github.com/choolena5-cpu/scopeai-api/releases)
+[News feed](https://scopeai.cc/rss.xml) · [Subscription guide](https://scopeai.cc/subscribe)
 
 ---
 
-This repository publishes GEO observation documentation, design previews, API contracts and client examples. The analysis engine, billing implementation, customer data and backend source remain private. Downloading the repository does not grant model credits or access to customer data.
+**ScopeAI · Understanding technology. Seeing possibility.**
+
+[scopeai.cc](https://scopeai.cc/) · [Reading guide](docs/getting-started.md) · [FAQ](docs/faq.md)
+
+<sub>The images on this page are AI-created conceptual brand artwork. See the [visual notes](docs/showcase.md).</sub>
